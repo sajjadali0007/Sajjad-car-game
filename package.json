@@ -1,0 +1,7 @@
+{
+  "name": "car-game-final",
+  "version": "1.0.0",
+  "dependencies": {
+    "cordova-android": "^11.0.0"
+  }
+}

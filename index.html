@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ur">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Top-View Racing — Final</title>
+  <style>body{margin:0;font-family:system-ui;background:#0f1720;color:#fff;direction:rtl}.wrap{padding:12px}canvas{display:block;margin:0 auto;border-radius:12px;background:#111}</style>
+</head>
+<body>
+  <div class="wrap">
+    <h2 style="text-align:center">Top-View Racing — Final</h2>
+    <canvas id="game" width="600" height="1000"></canvas>
+    <p style="text-align:center">Use ← → or A/D to steer. On mobile use on-screen buttons (shown when site loads).</p>
+  </div>
+<script>
+// Minimal game loader that will use assets in /assets
+const canvas=document.getElementById('game'), ctx=canvas.getContext('2d');
+let assets={};
+function loadImage(name,src){return new Promise(res=>{const i=new Image();i.onload=()=>{assets[name]=i;res(i)};i.onerror=()=>{console.warn('load err',src);res(null)};i.src=src;});}
+Promise.all([
+  loadImage('road','assets/road.svg'),
+  loadImage('player','assets/player.svg'),
+  loadImage('enemy','assets/enemy.svg'),
+  loadImage('tree','assets/tree.svg'),
+  loadImage('building','assets/building.svg')
+]).then(()=>{ init(); });
+
+let player={x:260,y:780,w:80,h:160,vx:0,vy:2}, enemies=[], scenery=[], keys={},
+ frame=0, score=0, running=true, gameOver=false;
+
+window.addEventListener('keydown',e=>keys[e.key]=true);
+window.addEventListener('keyup',e=>keys[e.key]=false);
+
+function spawnEnemy(){ const w=60+Math.random()*80; const x=60+Math.random()*(600-120-w); const speed=2+Math.random()*3; enemies.push({x,y:-120,w,h:30+Math.random()*40,speed}); }
+function spawnScenery(){ const kind=Math.random()<0.6?'tree':'building'; const side=Math.random()<0.5?'left':'right'; const x= side==='left'?10:520; scenery.push({x,y:-100-Math.random()*800,kind}); }
+
+function rects(a,b){ return !(a.x+a.w<b.x||a.x>b.x+b.w||a.y+a.h<b.y||a.y>b.y+b.h); }
+
+function update(){
+  if(!running||gameOver) return; frame++;
+  if(keys['ArrowLeft']||keys['a']) player.x-=6;
+  if(keys['ArrowRight']||keys['d']) player.x+=6;
+  player.x=Math.max(60,Math.min(600-player.w-60,player.x));
+  if(frame%60===0) spawnEnemy();
+  if(frame%40===0) spawnScenery();
+  for(let i=enemies.length-1;i>=0;i--){ let e=enemies[i]; e.y+=e.speed +  (player.vy>0?player.vy:0); if(rects(player,e)){ gameOver=true; running=false; } if(e.y>1400){ enemies.splice(i,1); score++; } }
+  for(let i=scenery.length-1;i>=0;i--){ scenery[i].y += 2 + (player.vy*0.3); if(scenery[i].y>1400) scenery.splice(i,1); }
+}
+
+function draw(){
+  ctx.clearRect(0,0,600,1000);
+  if(assets.road) ctx.drawImage(assets.road,0,0,600,1000);
+  ctx.fillStyle='#eee'; const dash=40,gap=28,offset=(frame*4)%(dash+gap); for(let y=-200;y<1200;y+=dash+gap) ctx.fillRect(300-8,y+offset,16,dash);
+  scenery.forEach(s=>{ const img=assets[s.kind]; if(img) ctx.drawImage(img, s.x + (s.x>300?60:-20), s.y, img.width*0.5, img.height*0.5); });
+  enemies.forEach(e=>{ if(assets.enemy) ctx.drawImage(assets.enemy,e.x,e.y,e.w,e.h); });
+  if(assets.player){ ctx.save(); const tilt = Math.max(-0.18, Math.min(0.18, player.vx*0.02)); ctx.translate(player.x+player.w/2, player.y+player.h/2); ctx.rotate(tilt); ctx.drawImage(assets.player, -player.w/2, -player.h/2, player.w, player.h); ctx.restore(); }
+  ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(18,18,220,48); ctx.fillStyle='#fff'; ctx.font='20px sans-serif'; ctx.fillText('Score: '+score, 30, 52);
+  if(gameOver){ ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,600,1000); ctx.fillStyle='#fff'; ctx.font='36px sans-serif'; ctx.textAlign='center'; ctx.fillText('Game Over',300,420); ctx.textAlign='start'; }
+}
+
+function loop(){ update(); draw(); if(running) requestAnimationFrame(loop); }
+function init(){ player.x=600/2-player.w/2; loop(); }
+
+</script>
+</body>
+</html>
